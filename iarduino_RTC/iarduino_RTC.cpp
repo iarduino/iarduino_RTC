@@ -1,19 +1,26 @@
 #include "iarduino_RTC.h"
 /**	пользовательские функции **/
-//			инициализация модуля
-void		RTC::begin(uint8_t RTC_selected_module, uint8_t RTC_line_resss, uint8_t RTC_line_clk, uint8_t RTC_line_dat){
+			iarduino_RTC::iarduino_RTC(uint8_t RTC_selected_module, uint8_t RTC_line_resss, uint8_t RTC_line_clk, uint8_t RTC_line_dat){
 			RTC_uint_MODULE = RTC_selected_module;		//	сохраняем выбранный модуль
+			SPI_line_SS		= RTC_line_resss;			//	сохраняем номер вывода SS/RST
+			SI3_line_RES	= RTC_line_resss;			//	сохраняем номер вывода SS/RST
+			SI3_line_CLK	= RTC_line_clk;				//	сохраняем номер вывода CLK
+			SI3_line_DAT	= RTC_line_dat;				//	сохраняем номер вывода DAT
+			}
+
+//			инициализация модуля
+void		iarduino_RTC::begin(){
 			switch (RTC_array_BUS[RTC_uint_MODULE][0]){	//	сохраняем настройки модуля и инициализируем его шину (в соответствии с настройками из массива RTC_array_BUS)
 				case RTC_I2C: I2C_mass_STATUS[0]=RTC_array_BUS[RTC_uint_MODULE][1]; I2C_func_begin(); break;
-				case RTC_SPI: SPI_mass_STATUS[0]=RTC_array_BUS[RTC_uint_MODULE][1]; SPI_mass_STATUS[3]=RTC_array_BUS[RTC_uint_MODULE][4]; SPI_mass_STATUS[5]=RTC_array_BUS[RTC_uint_MODULE][5]; pinMode(RTC_line_resss, OUTPUT); digitalWrite(RTC_line_resss, ~RTC_array_BUS[RTC_uint_MODULE][2]&1); SPI_line_SS=RTC_line_resss; SPI_func_begin(); break;
-				case RTC_SI3: SI3_mass_STATUS[0]=RTC_array_BUS[RTC_uint_MODULE][1]; SI3_mass_STATUS[3]=RTC_array_BUS[RTC_uint_MODULE][4]; SI3_mass_STATUS[5]=RTC_array_BUS[RTC_uint_MODULE][5]; pinMode(RTC_line_resss, OUTPUT); digitalWrite(RTC_line_resss, ~RTC_array_BUS[RTC_uint_MODULE][2]&1); SI3_line_RES=RTC_line_resss; SI3_func_begin(RTC_line_clk, RTC_line_dat); break;
+				case RTC_SPI: SPI_mass_STATUS[0]=RTC_array_BUS[RTC_uint_MODULE][1]; SPI_mass_STATUS[3]=RTC_array_BUS[RTC_uint_MODULE][4]; SPI_mass_STATUS[5]=RTC_array_BUS[RTC_uint_MODULE][5]; pinMode(SPI_line_SS,  OUTPUT); digitalWrite(SPI_line_SS,  ~RTC_array_BUS[RTC_uint_MODULE][2]&1); SPI_func_begin(); break;
+				case RTC_SI3: SI3_mass_STATUS[0]=RTC_array_BUS[RTC_uint_MODULE][1]; SI3_mass_STATUS[3]=RTC_array_BUS[RTC_uint_MODULE][4]; SI3_mass_STATUS[5]=RTC_array_BUS[RTC_uint_MODULE][5]; pinMode(SI3_line_RES, OUTPUT); digitalWrite(SI3_line_RES, ~RTC_array_BUS[RTC_uint_MODULE][2]&1); SI3_func_begin(SI3_line_CLK, SI3_line_DAT); break;
 			}
 			RTC_func_START();	//	устанавливаем флаги управления и состояния модуля (в соответствии с настройками из массива RTC_array_STR)
 			gettime();			//	читаем время в переменные
 }
 
 //			вывод даты
-char*		RTC::gettime(char* RTC_enter_string){
+char*		iarduino_RTC::gettime(char* RTC_enter_string){
 uint8_t		RTC_var_I=0; RTC_uint_RETURN=0;
 //			читаем данные из модуля, или если не истёк RTC_uint_PERIOD, то пересчитываем время
 			if(RTC_uint_PERIOD==0){RTC_func_READ_TIME();}else{if(RTC_uint_REQUEST > millis()){RTC_uint_REQUEST=0;} if(RTC_uint_REQUEST == 0 || (RTC_uint_PERIOD*60000+RTC_uint_REQUEST <= millis())){RTC_func_READ_TIME();}else{RTC_func_CALC_TIME();}}
@@ -21,19 +28,19 @@ uint8_t		RTC_var_I=0; RTC_uint_RETURN=0;
 //			заполняем строку вывода
 			while(RTC_enter_string[RTC_var_I] > 0 && RTC_var_I < 255){
 				switch (RTC_enter_string[RTC_var_I]){
-					case 's': RTC_func_FILL_RESULTS(2,seconds ); break;
-					case 'i': RTC_func_FILL_RESULTS(2,minutes ); break;
-					case 'h': RTC_func_FILL_RESULTS(2,hours   ); break;
-					case 'H': RTC_func_FILL_RESULTS(2,Hours   ); break;
-					case 'd': RTC_func_FILL_RESULTS(2,day     ); break;
-					case 'w': RTC_func_FILL_RESULTS(1,weekday ); break;
-					case 'D': RTC_func_FILL_RESULTS(4,weekday ); break;
-					case 'm': RTC_func_FILL_RESULTS(2,month   ); break;
-					case 'M': RTC_func_FILL_RESULTS(4,month+6 ); break;
-					case 'Y': RTC_func_FILL_RESULTS(0,year    ); break;
-					case 'y': RTC_func_FILL_RESULTS(2,year    ); break;
-					case 'a': RTC_func_FILL_RESULTS(3,midday  ); break;
-					case 'A': RTC_func_FILL_RESULTS(3,midday+2); break;
+					case 's': if(RTC_uint_BLINK==1&&seconds%2){RTC_func_FILL_RESULTS(5,2);}else{RTC_func_FILL_RESULTS(2,seconds );} break;
+					case 'i': if(RTC_uint_BLINK==2&&seconds%2){RTC_func_FILL_RESULTS(5,2);}else{RTC_func_FILL_RESULTS(2,minutes );} break;
+					case 'h': if(RTC_uint_BLINK==3&&seconds%2){RTC_func_FILL_RESULTS(5,2);}else{RTC_func_FILL_RESULTS(2,hours   );} break;
+					case 'H': if(RTC_uint_BLINK==3&&seconds%2){RTC_func_FILL_RESULTS(5,2);}else{RTC_func_FILL_RESULTS(2,Hours   );} break;
+					case 'd': if(RTC_uint_BLINK==4&&seconds%2){RTC_func_FILL_RESULTS(5,2);}else{RTC_func_FILL_RESULTS(2,day     );} break;
+					case 'w': if(RTC_uint_BLINK==7&&seconds%2){RTC_func_FILL_RESULTS(5,1);}else{RTC_func_FILL_RESULTS(1,weekday );} break;
+					case 'D': if(RTC_uint_BLINK==7&&seconds%2){RTC_func_FILL_RESULTS(5,3);}else{RTC_func_FILL_RESULTS(4,weekday );} break;
+					case 'm': if(RTC_uint_BLINK==5&&seconds%2){RTC_func_FILL_RESULTS(5,2);}else{RTC_func_FILL_RESULTS(2,month   );} break;
+					case 'M': if(RTC_uint_BLINK==5&&seconds%2){RTC_func_FILL_RESULTS(5,3);}else{RTC_func_FILL_RESULTS(4,month+6 );} break;
+					case 'Y': if(RTC_uint_BLINK==6&&seconds%2){RTC_func_FILL_RESULTS(5,4);}else{RTC_func_FILL_RESULTS(0,year    );} break;
+					case 'y': if(RTC_uint_BLINK==6&&seconds%2){RTC_func_FILL_RESULTS(5,2);}else{RTC_func_FILL_RESULTS(2,year    );} break;
+					case 'a': if(RTC_uint_BLINK==8&&seconds%2){RTC_func_FILL_RESULTS(5,2);}else{RTC_func_FILL_RESULTS(3,midday  );} break;
+					case 'A': if(RTC_uint_BLINK==8&&seconds%2){RTC_func_FILL_RESULTS(5,2);}else{RTC_func_FILL_RESULTS(3,midday+2);} break;
 					default:  RTC_char_RETURN[RTC_uint_RETURN]=RTC_enter_string[RTC_var_I]; RTC_uint_RETURN++;
 				}	RTC_var_I++;
 			}		RTC_char_RETURN[RTC_uint_RETURN]='\0';
@@ -41,21 +48,22 @@ uint8_t		RTC_var_I=0; RTC_uint_RETURN=0;
 }
 
 //			установка даты
-void		RTC::settime(int RTC_i1, int RTC_i2, int RTC_i3, int RTC_i4, int RTC_i5, int RTC_i6, int RTC_i7){
+void		iarduino_RTC::settime(int RTC_i1, int RTC_i2, int RTC_i3, int RTC_i4, int RTC_i5, int RTC_i6, int RTC_i7){
 			RTC_func_WRITE_TIME(RTC_i1,RTC_i2,RTC_i3,RTC_i4,RTC_i5,RTC_i6,RTC_i7);
 			RTC_func_READ_TIME();
 			RTC_func_SET_MORE_TIME();
 }
 
 //			вывод даты без отправки строки
-void		RTC::gettime(){gettime("");}
+void		iarduino_RTC::gettime(){gettime("");}
 //			установка минимального периода опроса модуля
-void		RTC::period(uint8_t RTC_i){RTC_uint_PERIOD=RTC_i;}
-
+void		iarduino_RTC::period(uint8_t RTC_i){RTC_uint_PERIOD=RTC_i;}
+//			мигание одним из параметров времени
+void		iarduino_RTC::blinktime(uint8_t RTC_i){RTC_uint_BLINK=RTC_i;}
 
 /** внутренние функции для работы с модулями **/
 //			установка флагов управления и состояния модуля
-void		RTC::RTC_func_START(){
+void		iarduino_RTC::RTC_func_START(){
 uint8_t		RTC_var_I=0, RTC_var_J=0;
 			if(RTC_array_STR[RTC_uint_MODULE][0]){
 				for(int i=1; i<RTC_array_STR[RTC_uint_MODULE][0]*2; i+=2){
@@ -67,30 +75,30 @@ uint8_t		RTC_var_I=0, RTC_var_J=0;
 }
 
 //			чтение даты и времени из регистров модуля
-void		RTC::RTC_func_READ_TIME(){
+void		iarduino_RTC::RTC_func_READ_TIME(){
 			seconds = RTC_func_READ_TIME_INDEX(0);
 			minutes = RTC_func_READ_TIME_INDEX(1);
 			Hours   = RTC_func_READ_TIME_INDEX(2);
 			day     = RTC_func_READ_TIME_INDEX(3);
 			month   = RTC_func_READ_TIME_INDEX(4);
 			year    = RTC_func_READ_TIME_INDEX(5);
-			weekday = RTC_func_READ_TIME_INDEX(6);
+			weekday = RTC_func_READ_TIME_INDEX(6); weekday--; // в регистре значение weekday не 0...6, а 1...7
 			RTC_uint_REQUEST = millis();
 }
 
 //			запись даты и времени в регистры модуля
-void		RTC::RTC_func_WRITE_TIME(int RTC_i1, int RTC_i2, int RTC_i3, int RTC_i4, int RTC_i5, int RTC_i6, int RTC_i7){
-			if(RTC_i1<=60 && RTC_i1>=0){RTC_func_WRITE_TIME_INDEX(0,RTC_i1);}
-			if(RTC_i2<=60 && RTC_i2>=0){RTC_func_WRITE_TIME_INDEX(1,RTC_i2);}
-			if(RTC_i3<=23 && RTC_i3>=0){RTC_func_WRITE_TIME_INDEX(2,RTC_i3);}
-			if(RTC_i4<=31 && RTC_i4>=1){RTC_func_WRITE_TIME_INDEX(3,RTC_i4);}
-			if(RTC_i5<=12 && RTC_i5>=1){RTC_func_WRITE_TIME_INDEX(4,RTC_i5);}
-			if(RTC_i6<=99 && RTC_i6>=0){RTC_func_WRITE_TIME_INDEX(5,RTC_i6);}
-			if(RTC_i7<= 6 && RTC_i7>=0){RTC_func_WRITE_TIME_INDEX(6,RTC_i7);}
+void		iarduino_RTC::RTC_func_WRITE_TIME(int RTC_i1, int RTC_i2, int RTC_i3, int RTC_i4, int RTC_i5, int RTC_i6, int RTC_i7){
+			if(RTC_i1<=60 && RTC_i1>=0){RTC_func_WRITE_TIME_INDEX(0,RTC_i1  );}
+			if(RTC_i2<=60 && RTC_i2>=0){RTC_func_WRITE_TIME_INDEX(1,RTC_i2  );}
+			if(RTC_i3<=23 && RTC_i3>=0){RTC_func_WRITE_TIME_INDEX(2,RTC_i3  );}
+			if(RTC_i4<=31 && RTC_i4>=1){RTC_func_WRITE_TIME_INDEX(3,RTC_i4  );}
+			if(RTC_i5<=12 && RTC_i5>=1){RTC_func_WRITE_TIME_INDEX(4,RTC_i5  );}
+			if(RTC_i6<=99 && RTC_i6>=0){RTC_func_WRITE_TIME_INDEX(5,RTC_i6  );}
+			if(RTC_i7<= 6 && RTC_i7>=0){RTC_func_WRITE_TIME_INDEX(6,RTC_i7+1);} // в регистре значение RTC_i7 не 0...6, а 1...7
 }
 
 //			чтение байта из регистра модуля
-uint8_t		RTC::RTC_func_READ_REG(uint8_t RTC_byte_address){
+uint8_t		iarduino_RTC::RTC_func_READ_REG(uint8_t RTC_byte_address){
 uint8_t		RTC_var_I=0xFF;
 			switch (RTC_array_BUS[RTC_uint_MODULE][0]){
 				case RTC_I2C:
@@ -126,7 +134,7 @@ uint8_t		RTC_var_I=0xFF;
 }
 
 //			запись байта в регистр модуля
-void		RTC::RTC_func_WRITE_REG(uint8_t RTC_byte_address, uint8_t RTC_byte_data){
+void		iarduino_RTC::RTC_func_WRITE_REG(uint8_t RTC_byte_address, uint8_t RTC_byte_data){
 			RTC_byte_address+=RTC_array_BUS[RTC_uint_MODULE][7];						// добавляем к адресу регистра слагаемое из ячейки 7 массива RTC_array_BUS
 			switch (RTC_array_BUS[RTC_uint_MODULE][0]){
 				case RTC_I2C:
@@ -154,28 +162,29 @@ void		RTC::RTC_func_WRITE_REG(uint8_t RTC_byte_address, uint8_t RTC_byte_data){
 }
 
 //			заполнение строки вывода результата
-void		RTC::RTC_func_FILL_RESULTS(uint8_t RTC_type, uint8_t RTC_data){
+void		iarduino_RTC::RTC_func_FILL_RESULTS(uint8_t RTC_type, uint8_t RTC_data){
 			switch (RTC_type){
 			/* 4 знака	*/	case 0:	RTC_char_RETURN[RTC_uint_RETURN]=(RTC_uint_CENTURY-1)/10+48; RTC_uint_RETURN++; RTC_char_RETURN[RTC_uint_RETURN]=(RTC_uint_CENTURY-1)%10+48; RTC_uint_RETURN++; RTC_char_RETURN[RTC_uint_RETURN]=RTC_data/10+48; RTC_uint_RETURN++; RTC_char_RETURN[RTC_uint_RETURN]=RTC_data%10+48; RTC_uint_RETURN++; break;
 			/* 1 знак	*/	case 1:	RTC_char_RETURN[RTC_uint_RETURN]=RTC_data+48; RTC_uint_RETURN++; break;
 			/* 2 знака	*/	case 2:	RTC_char_RETURN[RTC_uint_RETURN]=RTC_data/10+48; RTC_uint_RETURN++; RTC_char_RETURN[RTC_uint_RETURN]=RTC_data%10+48; RTC_uint_RETURN++; break;
 			/* AM / PM	*/	case 3: if(RTC_data< 4){for(int i=0; i<2; i++){RTC_char_RETURN[RTC_uint_RETURN]=RTC_char_MIDDAY[RTC_data][i]; RTC_uint_RETURN++;}} break;
 			/* дн / мес	*/	case 4: if(RTC_data<19){for(int i=0; i<3; i++){RTC_char_RETURN[RTC_uint_RETURN]=RTC_char_DayMon[RTC_data][i]; RTC_uint_RETURN++;}} break;
+			/* пробелы	*/	case 5: for(int i=0; i<RTC_data; i++){RTC_char_RETURN[RTC_uint_RETURN]=32; RTC_uint_RETURN++;} break;
 			}
 }
 
 //			преобразование двоично-десятичного кода в число
-uint8_t		RTC::RTC_func_CONVER_CODE_NUM(uint8_t RTC_byte){return (RTC_byte >> 4)*10+(RTC_byte & 0x0F);}
+uint8_t		iarduino_RTC::RTC_func_CONVER_CODE_NUM(uint8_t RTC_byte){return (RTC_byte >> 4)*10+(RTC_byte & 0x0F);}
 //			преобразование числа в двоично-десятичный код
-uint8_t		RTC::RTC_func_CONVER_NUM_CODE(uint8_t RTC_byte){return ((RTC_byte/10) << 4)+(RTC_byte%10);}
+uint8_t		iarduino_RTC::RTC_func_CONVER_NUM_CODE(uint8_t RTC_byte){return ((RTC_byte/10) << 4)+(RTC_byte%10);}
 //			преобразование переменных не читаемых из модуля
-void		RTC::RTC_func_SET_MORE_TIME(){hours=(Hours%12)?(Hours%12):12; midday=(Hours<12)?0:1;}
+void		iarduino_RTC::RTC_func_SET_MORE_TIME(){hours=(Hours%12)?(Hours%12):12; midday=(Hours<12)?0:1;}
 //			вспомогательная функция для RTC_func_WRITE_TIME()
-void		RTC::RTC_func_WRITE_TIME_INDEX(uint8_t RTC_byte_index, uint8_t RTC_byte_data){RTC_func_WRITE_REG(RTC_array_REG[RTC_uint_MODULE][RTC_byte_index], (RTC_func_CONVER_NUM_CODE(RTC_byte_data) | (~RTC_ignor_BIT[RTC_uint_MODULE][RTC_byte_index] & RTC_buff_TIMEREG[RTC_byte_index])) & (RTC_ignor_BIT[RTC_uint_MODULE][RTC_byte_index] | RTC_buff_TIMEREG[RTC_byte_index]));}
+void		iarduino_RTC::RTC_func_WRITE_TIME_INDEX(uint8_t RTC_byte_index, uint8_t RTC_byte_data){RTC_func_WRITE_REG(RTC_array_REG[RTC_uint_MODULE][RTC_byte_index], (RTC_func_CONVER_NUM_CODE(RTC_byte_data) | (~RTC_ignor_BIT[RTC_uint_MODULE][RTC_byte_index] & RTC_buff_TIMEREG[RTC_byte_index])) & (RTC_ignor_BIT[RTC_uint_MODULE][RTC_byte_index] | RTC_buff_TIMEREG[RTC_byte_index]));}
 //			вспомогательная функция для RTC_func_READ_TIME()
-uint8_t		RTC::RTC_func_READ_TIME_INDEX(uint8_t RTC_byte_index){RTC_buff_TIMEREG[RTC_byte_index] = RTC_func_READ_REG(RTC_array_REG[RTC_uint_MODULE][RTC_byte_index]); return RTC_func_CONVER_CODE_NUM(RTC_buff_TIMEREG[RTC_byte_index] & RTC_ignor_BIT[RTC_uint_MODULE][RTC_byte_index]);}
+uint8_t		iarduino_RTC::RTC_func_READ_TIME_INDEX(uint8_t RTC_byte_index){RTC_buff_TIMEREG[RTC_byte_index] = RTC_func_READ_REG(RTC_array_REG[RTC_uint_MODULE][RTC_byte_index]); return RTC_func_CONVER_CODE_NUM(RTC_buff_TIMEREG[RTC_byte_index] & RTC_ignor_BIT[RTC_uint_MODULE][RTC_byte_index]);}
 //			увеличение переменных времени на разницу между последним и текущим запросами
-void		RTC::RTC_func_CALC_TIME(){
+void		iarduino_RTC::RTC_func_CALC_TIME(){
 uint32_t	RTC_uint_this_request=millis();
 uint8_t		RTC_j=(RTC_func_CONVER_CODE_NUM(RTC_buff_TIMEREG[4] & RTC_ignor_BIT[RTC_uint_MODULE][4])==2)?29:31+(((RTC_func_CONVER_CODE_NUM(RTC_buff_TIMEREG[4] & RTC_ignor_BIT[RTC_uint_MODULE][4])>7)?RTC_func_CONVER_CODE_NUM(RTC_buff_TIMEREG[4] & RTC_ignor_BIT[RTC_uint_MODULE][4])+1:RTC_func_CONVER_CODE_NUM(RTC_buff_TIMEREG[4] & RTC_ignor_BIT[RTC_uint_MODULE][4]))%2);
 			RTC_uint_this_request-=RTC_uint_REQUEST; RTC_uint_this_request/=1000;
@@ -189,18 +198,18 @@ uint8_t		RTC_j=(RTC_func_CONVER_CODE_NUM(RTC_buff_TIMEREG[4] & RTC_ignor_BIT[RTC
 }
 
 /** внутренние функции для работы с шинами I2C, SPI, SI3 **/
-void		RTC::I2C_func_START			()												{int I2C_var_I=0; I2C_mass_STATUS[2]=1; TWCR = _BV(TWINT) | _BV(TWEN) | _BV(TWSTA); while(!(TWCR & _BV(TWINT))){I2C_var_I++; if(I2C_var_I>I2C_mass_STATUS[1]){I2C_mass_STATUS[2]=0; break;}} I2C_mass_STATUS[3] = TWSR & 0xF8; if(I2C_mass_STATUS[3]!=0x08){I2C_mass_STATUS[2]=0;}}
-void		RTC::I2C_func_RESTART		()												{int I2C_var_I=0;if(I2C_mass_STATUS[2]){ TWCR = _BV(TWINT) | _BV(TWEN) | _BV(TWSTA); while(!(TWCR & _BV(TWINT))){I2C_var_I++; if(I2C_var_I>I2C_mass_STATUS[1]){I2C_mass_STATUS[2]=0; break;}} I2C_mass_STATUS[3] = TWSR & 0xF8; if(I2C_mass_STATUS[3]!=0x10){I2C_mass_STATUS[2]=0;}}}
-void		RTC::I2C_func_SEND_ID		(uint8_t I2C_byte_ID, bool I2C_bit_RW)			{int I2C_var_I=0;if(I2C_mass_STATUS[2]){ TWDR = (I2C_byte_ID<<1)+I2C_bit_RW; TWCR = _BV(TWINT) | _BV(TWEN); while(!(TWCR & _BV(TWINT))){I2C_var_I++; if(I2C_var_I>I2C_mass_STATUS[1]){I2C_mass_STATUS[2]=0; break;}} I2C_mass_STATUS[3] = TWSR & 0xF8; if(I2C_bit_RW){ if(I2C_mass_STATUS[3]!=0x40){I2C_mass_STATUS[2]=0;}}else{if(I2C_mass_STATUS[3]!=0x18){I2C_mass_STATUS[2]=0;}}}}
-void		RTC::I2C_func_WRITE_BYTE	(uint8_t I2C_byte_DATA)							{int I2C_var_I=0;if(I2C_mass_STATUS[2]){ TWDR = I2C_byte_DATA; TWCR = _BV(TWINT) | _BV(TWEN); while(!(TWCR & _BV(TWINT))){I2C_var_I++; if(I2C_var_I>I2C_mass_STATUS[1]){I2C_mass_STATUS[2]=0; break;}} I2C_mass_STATUS[3] = TWSR & 0xF8; if(I2C_mass_STATUS[3]!=0x28){I2C_mass_STATUS[2]=0;}}}
-uint8_t		RTC::I2C_func_READ_BYTE		(bool I2C_bit_ACK)								{int I2C_var_I=0;if(I2C_mass_STATUS[2]){ TWCR = _BV(TWINT) | _BV(TWEN) | I2C_bit_ACK<<TWEA; while(!(TWCR & _BV(TWINT))){I2C_var_I++; if(I2C_var_I>I2C_mass_STATUS[1]){I2C_mass_STATUS[2]=0; break;}} I2C_mass_STATUS[3] = TWSR & 0xF8; if(I2C_bit_ACK){if(I2C_mass_STATUS[3]!=0x50){I2C_mass_STATUS[2]=0;}}else{if(I2C_mass_STATUS[3]!=0x58){I2C_mass_STATUS[2]=0;}} return TWDR;}else{return 0xFF;}}
-void		RTC::I2C_func_STOP			()												{int I2C_var_I=0; TWCR = _BV(TWINT) | _BV(TWEN) | _BV(TWSTO); while(!(TWCR & _BV(TWSTO))){I2C_var_I++; if(I2C_var_I>I2C_mass_STATUS[1]){I2C_mass_STATUS[2]=0; break;}} delayMicroseconds(20);}
-void		RTC::I2C_func_begin			()												{    I2C_mass_STATUS[2]=1; TWBR=((F_CPU/(I2C_mass_STATUS[0]*1000))-16)/2; if(TWBR<10){TWBR=10;} TWSR&=(~(_BV(TWPS1)|_BV(TWPS0)));}
-uint8_t		RTC::SPI_func_WRITEREAD_BYTE(uint8_t SPI_byte_DATA)							{int SPI_var_I=0; SPI_mass_STATUS[2]=1; SPDR = SPI_byte_DATA; while(!(SPSR & _BV(SPIF))){SPI_var_I++; if(SPI_var_I>SPI_mass_STATUS[1]){SPI_mass_STATUS[2]=0; break;}} if(SPI_mass_STATUS[2]){return SPDR;}else{return 0xFF;}}
-void		RTC::SPI_func_begin			()												{int SPI_var_I=0; SPI_mass_STATUS[2]=1; pinMode(MISO, INPUT); pinMode(MOSI, OUTPUT); pinMode(SCK, OUTPUT); pinMode(SS, OUTPUT); digitalWrite(SS, HIGH); if(SPI_mass_STATUS[0] >= F_CPU/2000){SPI_var_I=1;}else if(SPI_mass_STATUS[0] >= F_CPU/4000){SPI_var_I=0;}else if(SPI_mass_STATUS[0] >= F_CPU/8000){SPI_var_I=3;}else if(SPI_mass_STATUS[0] >= F_CPU/16000){SPI_var_I=2;}else if(SPI_mass_STATUS[0] >= F_CPU/32000){SPI_var_I=5;}else if(SPI_mass_STATUS[0] >= F_CPU/64000){SPI_var_I=4;}else if(SPI_mass_STATUS[0] >= F_CPU/128000){SPI_var_I=6;}; SPCR = _BV(SPE) | (SPI_mass_STATUS[5] << DORD) | (SPI_mass_STATUS[4] << MSTR) | (SPI_mass_STATUS[3] << 2) | (SPI_var_I >> 1); SPSR = SPI_var_I & 1;}
-void		RTC::SI3_func_WRITE_BITS	(uint32_t SI3_bytes_DATA, uint8_t SI3_byte_SUM) {int SI3_var_I=SI3_mass_STATUS[5]? 0:SI3_byte_SUM-1; int SI3_var_J=(1000/SI3_mass_STATUS[0]-354000000/F_CPU)/2; if(SI3_var_J<0){SI3_var_J=0;} pinMode(SI3_line_DAT, OUTPUT); while(SI3_var_I>=0 && SI3_var_I<SI3_byte_SUM){ digitalWrite(SI3_line_DAT, (SI3_bytes_DATA & _BV(SI3_var_I) ? HIGH:LOW)); if(!(SI3_mass_STATUS[3] & _BV(0)) && SI3_var_J){delayMicroseconds(SI3_var_J);} digitalWrite(SI3_line_CLK, (SI3_mass_STATUS[3] & _BV(1) ? LOW:HIGH)); if(SI3_var_J){delayMicroseconds(SI3_var_J);} digitalWrite(SI3_line_CLK, (SI3_mass_STATUS[3] & _BV(1) ? HIGH:LOW)); if((SI3_mass_STATUS[3] & _BV(0)) && SI3_var_J) {delayMicroseconds(SI3_var_J);} if(SI3_mass_STATUS[5]){SI3_var_I++;}else{SI3_var_I--;}} pinMode(SI3_line_DAT, INPUT);}
-uint32_t	RTC::SI3_func_READ_BITS		(uint8_t SI3_byte_SUM, bool SI3_bit_PRESET)		{int SI3_var_I=SI3_mass_STATUS[5]? 0:SI3_byte_SUM-1; int SI3_var_J=(1000/SI3_mass_STATUS[0]-310000000/F_CPU)/2; if(SI3_var_J<0){SI3_var_J=0;} uint32_t SI3_var_K=0; pinMode(SI3_line_DAT, INPUT); if(SI3_bit_PRESET){if(digitalRead(SI3_line_DAT)){SI3_var_K |= _BV(SI3_var_I);} if(SI3_mass_STATUS[5]){SI3_var_I++;}else{SI3_var_I--;}} while(SI3_var_I>=0 && SI3_var_I<SI3_byte_SUM){digitalWrite(SI3_line_CLK, (SI3_mass_STATUS[3] & _BV(1) ? LOW:HIGH)); if(SI3_var_J){delayMicroseconds(SI3_var_J);} if(!(SI3_mass_STATUS[3] & _BV(0))){if(digitalRead(SI3_line_DAT)){SI3_var_K |= _BV(SI3_var_I);}} digitalWrite(SI3_line_CLK, (SI3_mass_STATUS[3] & _BV(1) ? HIGH:LOW)); if(SI3_var_J) {delayMicroseconds(SI3_var_J);} if(SI3_mass_STATUS[3] & _BV(0)){if(digitalRead(SI3_line_DAT)){SI3_var_K |= _BV(SI3_var_I);}} if(SI3_mass_STATUS[5]){SI3_var_I++;}else{SI3_var_I--;}} return SI3_var_K;}
-void		RTC::SI3_func_WRITE_BYTE	(uint8_t SI3_byte_DATA)							{    SI3_func_WRITE_BITS(SI3_byte_DATA,8);}
-uint8_t		RTC::SI3_func_READ_BYTE		(bool SI3_bit_PRESET)							{return SI3_func_READ_BITS(8,SI3_bit_PRESET);}
-void		RTC::SI3_func_begin			(uint8_t i, uint8_t j)							{int SI3_var_I=0; SI3_mass_STATUS[2]=1; SI3_line_CLK=i; SI3_line_DAT=j; pinMode(SI3_line_DAT, INPUT); pinMode(SI3_line_CLK, OUTPUT); digitalWrite(SI3_line_CLK, (SI3_mass_STATUS[3] & _BV(1) ? HIGH:LOW));}
+void		iarduino_RTC::I2C_func_START			()												{int I2C_var_I=0; I2C_mass_STATUS[2]=1; TWCR = _BV(TWINT) | _BV(TWEN) | _BV(TWSTA); while(!(TWCR & _BV(TWINT))){I2C_var_I++; if(I2C_var_I>I2C_mass_STATUS[1]){I2C_mass_STATUS[2]=0; break;}} I2C_mass_STATUS[3] = TWSR & 0xF8; if(I2C_mass_STATUS[3]!=0x08){I2C_mass_STATUS[2]=0;}}
+void		iarduino_RTC::I2C_func_RESTART			()												{int I2C_var_I=0;if(I2C_mass_STATUS[2]){ TWCR = _BV(TWINT) | _BV(TWEN) | _BV(TWSTA); while(!(TWCR & _BV(TWINT))){I2C_var_I++; if(I2C_var_I>I2C_mass_STATUS[1]){I2C_mass_STATUS[2]=0; break;}} I2C_mass_STATUS[3] = TWSR & 0xF8; if(I2C_mass_STATUS[3]!=0x10){I2C_mass_STATUS[2]=0;}}}
+void		iarduino_RTC::I2C_func_SEND_ID			(uint8_t I2C_byte_ID, bool I2C_bit_RW)			{int I2C_var_I=0;if(I2C_mass_STATUS[2]){ TWDR = (I2C_byte_ID<<1)+I2C_bit_RW; TWCR = _BV(TWINT) | _BV(TWEN); while(!(TWCR & _BV(TWINT))){I2C_var_I++; if(I2C_var_I>I2C_mass_STATUS[1]){I2C_mass_STATUS[2]=0; break;}} I2C_mass_STATUS[3] = TWSR & 0xF8; if(I2C_bit_RW){ if(I2C_mass_STATUS[3]!=0x40){I2C_mass_STATUS[2]=0;}}else{if(I2C_mass_STATUS[3]!=0x18){I2C_mass_STATUS[2]=0;}}}}
+void		iarduino_RTC::I2C_func_WRITE_BYTE		(uint8_t I2C_byte_DATA)							{int I2C_var_I=0;if(I2C_mass_STATUS[2]){ TWDR = I2C_byte_DATA; TWCR = _BV(TWINT) | _BV(TWEN); while(!(TWCR & _BV(TWINT))){I2C_var_I++; if(I2C_var_I>I2C_mass_STATUS[1]){I2C_mass_STATUS[2]=0; break;}} I2C_mass_STATUS[3] = TWSR & 0xF8; if(I2C_mass_STATUS[3]!=0x28){I2C_mass_STATUS[2]=0;}}}
+uint8_t		iarduino_RTC::I2C_func_READ_BYTE		(bool I2C_bit_ACK)								{int I2C_var_I=0;if(I2C_mass_STATUS[2]){ TWCR = _BV(TWINT) | _BV(TWEN) | I2C_bit_ACK<<TWEA; while(!(TWCR & _BV(TWINT))){I2C_var_I++; if(I2C_var_I>I2C_mass_STATUS[1]){I2C_mass_STATUS[2]=0; break;}} I2C_mass_STATUS[3] = TWSR & 0xF8; if(I2C_bit_ACK){if(I2C_mass_STATUS[3]!=0x50){I2C_mass_STATUS[2]=0;}}else{if(I2C_mass_STATUS[3]!=0x58){I2C_mass_STATUS[2]=0;}} return TWDR;}else{return 0xFF;}}
+void		iarduino_RTC::I2C_func_STOP				()												{int I2C_var_I=0; TWCR = _BV(TWINT) | _BV(TWEN) | _BV(TWSTO); while(!(TWCR & _BV(TWSTO))){I2C_var_I++; if(I2C_var_I>I2C_mass_STATUS[1]){I2C_mass_STATUS[2]=0; break;}} delayMicroseconds(20);}
+void		iarduino_RTC::I2C_func_begin			()												{    I2C_mass_STATUS[2]=1; TWBR=((F_CPU/(I2C_mass_STATUS[0]*1000))-16)/2; if(TWBR<10){TWBR=10;} TWSR&=(~(_BV(TWPS1)|_BV(TWPS0)));}
+uint8_t		iarduino_RTC::SPI_func_WRITEREAD_BYTE	(uint8_t SPI_byte_DATA)							{int SPI_var_I=0; SPI_mass_STATUS[2]=1; SPDR = SPI_byte_DATA; while(!(SPSR & _BV(SPIF))){SPI_var_I++; if(SPI_var_I>SPI_mass_STATUS[1]){SPI_mass_STATUS[2]=0; break;}} if(SPI_mass_STATUS[2]){return SPDR;}else{return 0xFF;}}
+void		iarduino_RTC::SPI_func_begin			()												{int SPI_var_I=0; SPI_mass_STATUS[2]=1; pinMode(MISO, INPUT); pinMode(MOSI, OUTPUT); pinMode(SCK, OUTPUT); pinMode(SS, OUTPUT); digitalWrite(SS, HIGH); if(SPI_mass_STATUS[0] >= F_CPU/2000){SPI_var_I=1;}else if(SPI_mass_STATUS[0] >= F_CPU/4000){SPI_var_I=0;}else if(SPI_mass_STATUS[0] >= F_CPU/8000){SPI_var_I=3;}else if(SPI_mass_STATUS[0] >= F_CPU/16000){SPI_var_I=2;}else if(SPI_mass_STATUS[0] >= F_CPU/32000){SPI_var_I=5;}else if(SPI_mass_STATUS[0] >= F_CPU/64000){SPI_var_I=4;}else if(SPI_mass_STATUS[0] >= F_CPU/128000){SPI_var_I=6;}; SPCR = _BV(SPE) | (SPI_mass_STATUS[5] << DORD) | (SPI_mass_STATUS[4] << MSTR) | (SPI_mass_STATUS[3] << 2) | (SPI_var_I >> 1); SPSR = SPI_var_I & 1;}
+void		iarduino_RTC::SI3_func_WRITE_BITS		(uint32_t SI3_bytes_DATA, uint8_t SI3_byte_SUM) {int SI3_var_I=SI3_mass_STATUS[5]? 0:SI3_byte_SUM-1; int SI3_var_J=(1000/SI3_mass_STATUS[0]-354000000/F_CPU)/2; if(SI3_var_J<0){SI3_var_J=0;} pinMode(SI3_line_DAT, OUTPUT); while(SI3_var_I>=0 && SI3_var_I<SI3_byte_SUM){ digitalWrite(SI3_line_DAT, (SI3_bytes_DATA & _BV(SI3_var_I) ? HIGH:LOW)); if(!(SI3_mass_STATUS[3] & _BV(0)) && SI3_var_J){delayMicroseconds(SI3_var_J);} digitalWrite(SI3_line_CLK, (SI3_mass_STATUS[3] & _BV(1) ? LOW:HIGH)); if(SI3_var_J){delayMicroseconds(SI3_var_J);} digitalWrite(SI3_line_CLK, (SI3_mass_STATUS[3] & _BV(1) ? HIGH:LOW)); if((SI3_mass_STATUS[3] & _BV(0)) && SI3_var_J) {delayMicroseconds(SI3_var_J);} if(SI3_mass_STATUS[5]){SI3_var_I++;}else{SI3_var_I--;}} pinMode(SI3_line_DAT, INPUT);}
+uint32_t	iarduino_RTC::SI3_func_READ_BITS		(uint8_t SI3_byte_SUM, bool SI3_bit_PRESET)		{int SI3_var_I=SI3_mass_STATUS[5]? 0:SI3_byte_SUM-1; int SI3_var_J=(1000/SI3_mass_STATUS[0]-310000000/F_CPU)/2; if(SI3_var_J<0){SI3_var_J=0;} uint32_t SI3_var_K=0; pinMode(SI3_line_DAT, INPUT); if(SI3_bit_PRESET){if(digitalRead(SI3_line_DAT)){SI3_var_K |= _BV(SI3_var_I);} if(SI3_mass_STATUS[5]){SI3_var_I++;}else{SI3_var_I--;}} while(SI3_var_I>=0 && SI3_var_I<SI3_byte_SUM){digitalWrite(SI3_line_CLK, (SI3_mass_STATUS[3] & _BV(1) ? LOW:HIGH)); if(SI3_var_J){delayMicroseconds(SI3_var_J);} if(!(SI3_mass_STATUS[3] & _BV(0))){if(digitalRead(SI3_line_DAT)){SI3_var_K |= _BV(SI3_var_I);}} digitalWrite(SI3_line_CLK, (SI3_mass_STATUS[3] & _BV(1) ? HIGH:LOW)); if(SI3_var_J) {delayMicroseconds(SI3_var_J);} if(SI3_mass_STATUS[3] & _BV(0)){if(digitalRead(SI3_line_DAT)){SI3_var_K |= _BV(SI3_var_I);}} if(SI3_mass_STATUS[5]){SI3_var_I++;}else{SI3_var_I--;}} return SI3_var_K;}
+void		iarduino_RTC::SI3_func_WRITE_BYTE		(uint8_t SI3_byte_DATA)							{    SI3_func_WRITE_BITS(SI3_byte_DATA,8);}
+uint8_t		iarduino_RTC::SI3_func_READ_BYTE		(bool SI3_bit_PRESET)							{return SI3_func_READ_BITS(8,SI3_bit_PRESET);}
+void		iarduino_RTC::SI3_func_begin			(uint8_t i, uint8_t j)							{int SI3_var_I=0; SI3_mass_STATUS[2]=1; SI3_line_CLK=i; SI3_line_DAT=j; pinMode(SI3_line_DAT, INPUT); pinMode(SI3_line_CLK, OUTPUT); digitalWrite(SI3_line_CLK, (SI3_mass_STATUS[3] & _BV(1) ? HIGH:LOW));}
 
