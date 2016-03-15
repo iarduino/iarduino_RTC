@@ -88,13 +88,13 @@ void		iarduino_RTC::RTC_func_READ_TIME(){
 
 //			запись даты и времени в регистры модуля
 void		iarduino_RTC::RTC_func_WRITE_TIME(int RTC_i1, int RTC_i2, int RTC_i3, int RTC_i4, int RTC_i5, int RTC_i6, int RTC_i7){
-			if(RTC_i1<=60 && RTC_i1>=0){RTC_func_WRITE_TIME_INDEX(0,RTC_i1  );}
-			if(RTC_i2<=60 && RTC_i2>=0){RTC_func_WRITE_TIME_INDEX(1,RTC_i2  );}
-			if(RTC_i3<=23 && RTC_i3>=0){RTC_func_WRITE_TIME_INDEX(2,RTC_i3  );}
-			if(RTC_i4<=31 && RTC_i4>=1){RTC_func_WRITE_TIME_INDEX(3,RTC_i4  );}
-			if(RTC_i5<=12 && RTC_i5>=1){RTC_func_WRITE_TIME_INDEX(4,RTC_i5  );}
-			if(RTC_i6<=99 && RTC_i6>=0){RTC_func_WRITE_TIME_INDEX(5,RTC_i6  );}
-			if(RTC_i7<= 6 && RTC_i7>=0){RTC_func_WRITE_TIME_INDEX(6,RTC_i7+1);} // в регистре значение RTC_i7 не 0...6, а 1...7
+			if(RTC_i1<=60 && RTC_i1>=0){RTC_func_WRITE_TIME_INDEX(0, RTC_i1   );}
+			if(RTC_i2<=60 && RTC_i2>=0){RTC_func_WRITE_TIME_INDEX(1, RTC_i2   );}
+			if(RTC_i3<=23 && RTC_i3>=0){RTC_func_WRITE_TIME_INDEX(2, RTC_i3   );}
+			if(RTC_i4<=31 && RTC_i4>=1){RTC_func_WRITE_TIME_INDEX(3, RTC_i4   );}
+			if(RTC_i5<=12 && RTC_i5>=1){RTC_func_WRITE_TIME_INDEX(4, RTC_i5   );}
+			if(RTC_i6<=99 && RTC_i6>=0){RTC_func_WRITE_TIME_INDEX(5, RTC_i6   );}
+			if(RTC_i7<= 6 && RTC_i7>=0){RTC_func_WRITE_TIME_INDEX(6,(RTC_i7+1));} // в регистре значение RTC_i7 не 0...6, а 1...7
 }
 
 //			чтение байта из регистра модуля
